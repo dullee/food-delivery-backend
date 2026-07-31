@@ -1,4 +1,5 @@
-require("dotenv").config();
+require("@dotenvx/dotenvx").config();
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -7,6 +8,10 @@ const User = require("./models/User");
 const Food = require("./models/Foods");
 
 const app = express();
+console.log(
+  "DEBUG ENVIRONMENT KEYS:",
+  Object.keys(process.env).filter((key) => key.includes("MONGO")),
+);
 
 // Middleware
 app.use(cors()); // Lets your Next.js app talk to Express
@@ -27,6 +32,39 @@ app.post("/api/users/check-email", async (req, res) => {
     res.status(200).json({ message: "Email available" });
   } catch (error) {
     res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.post("/api/foods", async (req, res) => {
+  try {
+    console.log("Incoming Food Data:", req.body);
+
+    const { foodName, price, image, ingredients, category } = req.body;
+
+    // 1. Extract the raw ID string if it's nested, or keep it blank for now
+    // (Mongoose will throw a validation error if you pass an object into an ObjectId type field)
+    const categoryId = typeof category === "object" ? category._id : category;
+
+    const newFood = new Food({
+      foodName,
+      price,
+      image,
+      ingredients,
+      category: categoryId, // Assign the raw ID string
+    });
+
+    // 2. THIS IS THE MISSING PIECE: Actually write the document to MongoDB!
+    await newFood.save();
+
+    res
+      .status(201)
+      .json({ message: "Food saved successfully!", food: newFood });
+  } catch (error) {
+    // 3. Updated error print to log out validation errors directly to your console
+    console.error("Mongoose Save Error:", error);
+    res
+      .status(500)
+      .json({ error: "Failed to save food item", details: error.message });
   }
 });
 

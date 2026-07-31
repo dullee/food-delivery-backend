@@ -1,39 +1,57 @@
-// server.js
+require("dotenv").config();
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
 
 const User = require("./models/User");
-const Food = require("./models/Food");
-
-const newUser = new User({
-  email: "test@example.com",
-  password: "hashedpw123",
-});
-await newUser.save();
-
-const newFood = new Food({
-  foodName: "Buuz",
-  price: 8000,
-  ingredients: "Mutton, onion, flour",
-});
-await newFood.save();
-
-// Find one
-const user = await User.findOne({ email: "test@example.com" });
-
-// Find all foods
-const allFoods = await Food.find();
-
-// Find by ID, and auto-fill the related category (per the "ref" from Part 4)
-const food = await Food.findById("652a1f...").populate("category");
-
-require("dotenv").config();
-const mongoose = require("mongoose");
-const express = require("express");
+const Food = require("./models/Foods");
 
 const app = express();
 
+// Middleware
+app.use(cors()); // Lets your Next.js app talk to Express
+app.use(express.json()); // Allows Express to read JSON sent from Next.js
+
+// POST Route: Triggered when user submits the Next.js form
+// Add this route in server.js
+app.post("/api/users/check-email", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: "Email already registered" });
+    }
+
+    // Email is free to use!
+    res.status(200).json({ message: "Email available" });
+  } catch (error) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.post("/api/users", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const newUser = new User({ email, password });
+    await newUser.save(); // <-- THIS is what writes to MongoDB!
+
+    res
+      .status(201)
+      .json({ message: "User saved successfully!", user: newUser });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to save user" });
+  }
+});
+
+// Connect to MongoDB Atlas first, then start the server on Port 4000
 mongoose
   .connect(process.env.MONGODB_URI)
-  .then(() => console.log("✅ Connected to MongoDB"))
-  .catch((err) => console.error("❌ Connection failed:", err));
-
-app.listen(3000, () => console.log("Server running on port 3000"));
+  .then(() => {
+    console.log("✅ Connected to MongoDB");
+    app.listen(4000, () =>
+      console.log("🚀 Backend server running on http://localhost:4000"),
+    );
+  })
+  .catch((err) => console.error("❌ Database connection error:", err));

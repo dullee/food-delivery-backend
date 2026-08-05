@@ -68,6 +68,32 @@ app.post("/api/foods", async (req, res) => {
   }
 });
 
+app.get("/api/users", async (req, res) => {
+  try {
+    // 1. Query the database to find all user documents
+    const users = await User.find({});
+
+    // 2. If the array is empty, return a 404
+    if (!users || users.length === 0) {
+      return res.status(404).json({ message: "No users found" });
+    }
+
+    // 3. Return the array of users with a 200 OK status
+    return res.status(200).json(users);
+  } catch (error) {
+    // 4. Catch unexpected database errors
+    console.error("Error fetching users:", error);
+    return res.status(500).json({ error: "Server error fetching users" });
+  }
+});
+
+app.get("/api/foods", async (req, res)=> {
+
+  const foodsData = await Food.find({});
+
+  return res.status(200).json(foodsData)
+});
+
 app.post("/api/users", async (req, res) => {
   try {
     const { email, password } = req.body;
